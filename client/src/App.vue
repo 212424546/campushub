@@ -1,0 +1,104 @@
+<script setup>
+import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+
+const isLoggedIn = ref(!!localStorage.getItem('token'))
+
+// 路由变化时重新读取登录状态（登录/退出后导航栏同步更新）
+watch(
+  () => route.fullPath,
+  () => {
+    isLoggedIn.value = !!localStorage.getItem('token')
+  }
+)
+
+function logout() {
+  localStorage.removeItem('token')
+  isLoggedIn.value = false
+  router.push('/')
+}
+</script>
+
+<template>
+  <div class="app-shell">
+    <header class="navbar">
+      <div class="navbar-inner">
+        <RouterLink to="/" class="brand">CampusHub 校园互助</RouterLink>
+        <nav class="nav-links">
+          <RouterLink to="/">首页</RouterLink>
+          <RouterLink to="/create">发帖</RouterLink>
+          <RouterLink v-if="!isLoggedIn" to="/login">登录</RouterLink>
+          <button v-else class="logout-btn" @click="logout">退出</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main">
+      <router-view />
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.app-shell {
+  min-height: 100vh;
+}
+.navbar {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.navbar-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  text-decoration: none;
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav-links a {
+  color: #374151;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.nav-links a:hover {
+  background: #f3f4f6;
+}
+.nav-links a.router-link-exact-active {
+  color: #4f46e5;
+  background: #eef2ff;
+}
+.logout-btn {
+  border: none;
+  background: #f3f4f6;
+  color: #374151;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.logout-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+</style>
