@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { truncateText } from '../constants.js'
+import { truncateText, getImageUrl } from '../constants.js'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -27,6 +27,12 @@ function go() {
       <span v-if="post.type" class="tag">{{ post.type }}</span>
     </div>
     <p class="desc">{{ truncateText(post.description) || '暂无描述' }}</p>
+    <img
+      v-if="post.images && post.images.length"
+      :src="getImageUrl(post.images[0])"
+      alt=""
+      class="w-24 h-24 object-cover rounded mb-2"
+    />
     <div class="meta">
       <span>🏫 {{ post.campus || '未填写校区' }}</span>
       <span v-if="post.viewed_at || post.created_at">{{ formatTime(post.viewed_at || post.created_at) }}</span>

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { isSocialType, truncateText } from '../constants.js'
+import { isSocialType, truncateText, getImageUrl } from '../constants.js'
 
 const router = useRouter()
 
@@ -181,8 +181,11 @@ onMounted(fetchPosts)
           <div class="flex items-center gap-3">
             <el-avatar :size="40">{{ (post.nickname || '匿')[0] }}</el-avatar>
             <div>
-              <div v-if="post.is_anonymous === 1 || post.is_anonymous === true" class="text-sm font-semibold text-gray-800">匿名用户</div>
-              <div v-else class="text-sm font-semibold text-indigo-600 cursor-pointer hover:underline" @click.stop="goUser(post)">{{ post.nickname || '未设置' }}</div>
+              <div class="flex items-center gap-1">
+                <span v-if="post.is_anonymous === 1 || post.is_anonymous === true" class="text-sm font-semibold text-gray-800">{{ post.nickname || '匿名用户' }}</span>
+                <span v-else class="text-sm font-semibold text-indigo-600 cursor-pointer hover:underline" @click.stop="goUser(post)">{{ post.nickname || '未设置' }}</span>
+                <el-tag v-if="post.is_owner" size="small" type="primary">我</el-tag>
+              </div>
               <div class="text-xs text-gray-400">🏫 {{ post.campus || '未填写校区' }}</div>
             </div>
           </div>
@@ -191,6 +194,13 @@ onMounted(fetchPosts)
 
         <h2 class="text-lg font-bold text-gray-800 mb-2">{{ post.title }}</h2>
         <p class="text-gray-500 text-sm line-clamp-2 mb-3">{{ truncateText(post.description) || '暂无描述' }}</p>
+
+        <img
+          v-if="post.images && post.images.length"
+          :src="getImageUrl(post.images[0])"
+          alt=""
+          class="w-24 h-24 object-cover rounded mb-3"
+        />
 
         <div v-if="!isSocialType(post.type)" class="text-orange-600 font-semibold">
           {{ post.type === '二手' ? '价格' : '报酬' }} ¥{{ post.reward }}

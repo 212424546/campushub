@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import dayjs from 'dayjs'
-import { truncateText } from '../constants.js'
+import { truncateText, isSocialType } from '../constants.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PostCard from '../components/PostCard.vue'
 
@@ -207,6 +207,31 @@ function goPostId(id) {
   if (id != null) router.push('/post/' + id)
 }
 
+async function takeDownPost(post) {
+  const token = getToken()
+  if (!token) { router.push('/login'); return }
+  const isDelete = isSocialType(post.type)
+  const actionText = isDelete ? '删除' : '下架'
+  try {
+    await ElMessageBox.confirm(`确定${actionText}该帖子吗？`, '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    const res = await axios.delete('http://localhost:3000/api/posts/' + post.id, {
+      headers: { Authorization: 'Bearer ' + token },
+    })
+    if (res.data.code === 0) {
+      ElMessage.success(isDelete ? '帖子已删除' : '帖子已下架')
+      await load()
+    } else {
+      ElMessage.error(res.data.msg || `${actionText}失败`)
+    }
+  } catch (err) {
+    ElMessage.error(err.response?.data?.msg || `${actionText}失败`)
+  }
+}
+
 async function unblock(user) {
   const token = getToken()
   if (!token) { router.push('/login'); return }
@@ -295,6 +320,11 @@ onMounted(load)
           <span>{{ post.type === '二手' ? '价格' : '报酬' }} ¥{{ post.reward }}</span>
           <span>🏫 {{ post.campus || '未填写校区' }}</span>
           <span>{{ formatTime(post.created_at) }}</span>
+        </div>
+        <div class="card-actions">
+          <el-button v-if="isSocialType(post.type) || post.status === 0" size="small" type="danger" text @click.stop="takeDownPost(post)">
+            {{ isSocialType(post.type) ? '删除' : '下架' }}
+          </el-button>
         </div>
       </div>
     </div>
@@ -572,6 +602,11 @@ onMounted(load)
   gap: 12px;
   font-size: 13px;
   color: #6b7280;
+}
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 .card-desc {
   margin: 0 0 8px;

@@ -10,3 +10,12 @@ export function truncateText(text, max = 10) {
   const str = String(text)
   return str.length > max ? str.slice(0, max) + '...' : str
 }
+
+// 后端返回的是相对路径（如 /uploads/xxx.jpg），前端需拼上后端地址才能正确加载
+export function getImageUrl(path) {
+  if (!path) return path
+  const str = String(path)
+  if (/^https?:\/\//i.test(str) || str.startsWith('data:')) return str
+  if (str.startsWith('/')) return 'http://localhost:3000' + str
+  return str
+}

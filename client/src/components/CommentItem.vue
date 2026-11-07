@@ -7,7 +7,7 @@ const props = defineProps({
   comment: { type: Object, required: true },
 })
 
-const emit = defineEmits(['reply', 'like', 'report'])
+const emit = defineEmits(['reply', 'like', 'report', 'goUser'])
 
 function formatTime(t) {
   if (!t) return ''
@@ -18,7 +18,14 @@ function formatTime(t) {
 <template>
   <div class="comment-item">
     <div class="comment-head">
-      <span class="comment-nickname">{{ comment.nickname || '匿名用户' }}</span>
+      <div class="comment-head-left">
+        <span
+          class="comment-nickname"
+          :class="{ clickable: comment.user_id }"
+          @click="emit('goUser', comment)"
+        >{{ comment.nickname || '匿名用户' }}</span>
+        <el-tag v-if="comment.is_owner" size="small" type="primary">我</el-tag>
+      </div>
       <div class="comment-head-right">
         <button class="icon-btn report-btn" @click="emit('report', comment)">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -55,6 +62,11 @@ function formatTime(t) {
   margin-bottom: 6px;
   gap: 8px;
 }
+.comment-head-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .comment-head-right {
   display: flex;
   align-items: center;
@@ -64,6 +76,13 @@ function formatTime(t) {
   font-size: 13px;
   font-weight: 600;
   color: #374151;
+}
+.comment-nickname.clickable {
+  cursor: pointer;
+}
+.comment-nickname.clickable:hover {
+  color: #2563eb;
+  text-decoration: underline;
 }
 .comment-time {
   font-size: 12px;

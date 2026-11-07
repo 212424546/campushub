@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { SOCIAL_TYPES } from '../constants.js'
+import { SOCIAL_TYPES, getImageUrl } from '../constants.js'
 
 const router = useRouter()
 
@@ -18,6 +18,20 @@ const campus = ref('')
 const isAnonymous = ref(false)
 const loading = ref(false)
 const message = ref('')
+const uploadedImages = ref([])
+
+const uploadHeaders = computed(() => ({
+  Authorization: 'Bearer ' + (localStorage.getItem('token') || ''),
+}))
+
+function onUploadSuccess(response, uploadFile) {
+  if (response && response.code === 0 && response.data && response.data.url) {
+    uploadedImages.value.push(response.data.url)
+    if (uploadFile) {
+      uploadFile.url = getImageUrl(response.data.url)
+    }
+  }
+}
 
 async function submit() {
   const token = localStorage.getItem('token')
@@ -43,6 +57,7 @@ async function submit() {
         reward: isSocial.value ? 0 : Number(reward.value) || 0,
         campus: campus.value,
         is_anonymous: isAnonymous.value ? 1 : 0,
+        images: uploadedImages.value,
       },
       {
         headers: { Authorization: 'Bearer ' + token },
@@ -91,6 +106,20 @@ async function submit() {
 
       <el-form-item>
         <el-checkbox v-model="isAnonymous">匿名发布</el-checkbox>
+      </el-form-item>
+
+      <el-form-item label="图片（最多 3 张）">
+        <el-upload
+          name="file"
+          action="http://localhost:3000/api/upload"
+          :headers="uploadHeaders"
+          list-type="picture-card"
+          :limit="3"
+          accept="image/*"
+          :on-success="onUploadSuccess"
+        >
+          <span class="text-gray-400">上传</span>
+        </el-upload>
       </el-form-item>
     </el-form>
 

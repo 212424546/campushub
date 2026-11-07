@@ -19,10 +19,21 @@ function getCurrentUserId(req) {
   }
 }
 
+// 将数据库中的 JSON 字符串安全解析为数组
+function parseImages(raw) {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
 // POST /api/posts  发帖（需鉴权，含违禁词过滤）
 router.post('/', auth, async (req, res) => {
   try {
-    const { type, title, description, reward, campus, is_anonymous } = req.body || {};
+    const { type, title, description, reward, campus, is_anonymous, images } = req.body || {};
 
     // 禁言拦截：被禁言用户禁止发帖
     const currentUser = await get('SELECT is_muted FROM users WHERE id = ?', [req.user.user_id]);
@@ -48,9 +59,15 @@ router.post('/', auth, async (req, res) => {
       is_anonymous === '1' ||
       is_anonymous === 'true';
 
+    // 图片 URL 数组（仅保留字符串），序列化为 JSON 字符串后入库
+    const imageList = Array.isArray(images)
+      ? images.filter((u) => typeof u === 'string' && u.trim()).slice(0, 9)
+      : [];
+    const imagesJson = imageList.length ? JSON.stringify(imageList) : null;
+
     const result = await run(
-      `INSERT INTO posts (user_id, type, title, description, reward, campus, is_anonymous)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO posts (user_id, type, title, description, reward, campus, is_anonymous, images)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.user_id,
         type,
@@ -59,6 +76,7 @@ router.post('/', auth, async (req, res) => {
         reward || 0,
         campus || null,
         anonymous ? 1 : 0,
+        imagesJson,
       ]
     );
 
@@ -140,7 +158,7 @@ router.get('/', async (req, res) => {
     const rows = await all(
       `SELECT
          p.id, p.user_id, p.type, p.title, p.description, p.reward,
-         p.campus, p.status, p.is_anonymous, p.created_at,
+         p.campus, p.status, p.is_anonymous, p.images, p.created_at,
          u.nickname, u.avg_rating,
          (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS likes_count,
          (SELECT COUNT(*) FROM favorites f WHERE f.post_id = p.id) AS favorites_count
@@ -173,17 +191,20 @@ router.get('/', async (req, res) => {
 
     const data = rows.map((row) => {
       const anonymous = row.is_anonymous === 1;
+      const isOwner = currentUserId != null && row.user_id === currentUserId;
       return {
         id: row.id,
-        user_id: anonymous ? null : row.user_id,
+        user_id: (anonymous && !isOwner) ? null : row.user_id,
+        is_owner: isOwner,
         type: row.type,
         title: row.title,
         description: row.description,
         reward: row.reward,
         campus: row.campus,
         status: row.status,
+        images: parseImages(row.images),
         is_anonymous: row.is_anonymous,
-        nickname: anonymous ? '匿名用户' : row.nickname,
+        nickname: anonymous ? (isOwner ? '我 (匿名)' : '匿名用户') : row.nickname,
         avg_rating: row.avg_rating,
         likes_count: row.likes_count,
         favorites_count: row.favorites_count,
@@ -211,7 +232,7 @@ router.get('/:id', async (req, res) => {
     const row = await get(
       `SELECT
          p.id, p.user_id, p.type, p.title, p.description, p.reward,
-         p.campus, p.status, p.is_anonymous, p.is_deleted,
+         p.campus, p.status, p.is_anonymous, p.is_deleted, p.images,
          p.created_at, p.updated_at,
          u.nickname, u.avatar_url, u.avg_rating, u.credit_score,
          (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS likes_count,
@@ -243,17 +264,20 @@ router.get('/:id', async (req, res) => {
     }
 
     const anonymous = row.is_anonymous === 1;
+    const isOwner = currentUserId != null && row.user_id === currentUserId;
     return res.json(ok({
       id: row.id,
-      user_id: anonymous ? null : row.user_id,
+      user_id: (anonymous && !isOwner) ? null : row.user_id,
+      is_owner: isOwner,
       type: row.type,
       title: row.title,
       description: row.description,
       reward: row.reward,
       campus: row.campus,
       status: row.status,
+      images: parseImages(row.images),
       is_anonymous: row.is_anonymous,
-      nickname: anonymous ? '匿名用户' : row.nickname,
+      nickname: anonymous ? (isOwner ? '我 (匿名)' : '匿名用户') : row.nickname,
       avatar_url: anonymous ? null : row.avatar_url,
       avg_rating: anonymous ? null : row.avg_rating,
       credit_score: anonymous ? null : row.credit_score,
@@ -266,6 +290,41 @@ router.get('/:id', async (req, res) => {
     }));
   } catch (err) {
     console.error('[posts/detail]', err);
+    return res.status(500).json(fail(500, '服务器内部错误'));
+  }
+});
+
+// DELETE /api/posts/:id  下架自己的帖子（仅发帖人，且状态为待接单）
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const postId = Number(req.params.id);
+    if (!Number.isInteger(postId) || postId <= 0) {
+      return res.status(400).json(fail(400, '无效的帖子 ID'));
+    }
+
+    const post = await get('SELECT id, user_id, type, status, is_deleted FROM posts WHERE id = ?', [postId]);
+    if (!post || post.is_deleted === 1) {
+      return res.status(404).json(fail(404, '帖子不存在'));
+    }
+
+    if (post.user_id !== req.user.user_id) {
+      return res.status(403).json(fail(403, '只能删除/下架自己的帖子'));
+    }
+
+    // 社交类帖子（闲聊/捞人/吐槽）无视 status，可直接删除
+    const isSocial = ['闲聊', '捞人', '吐槽'].includes(post.type);
+    if (!isSocial && post.status !== 0) {
+      return res.status(400).json(fail(400, '当前状态不允许下架，仅待接单的帖子可下架'));
+    }
+
+    await run(
+      'UPDATE posts SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [postId]
+    );
+
+    return res.json(ok({ post_id: postId }));
+  } catch (err) {
+    console.error('[posts/delete]', err);
     return res.status(500).json(fail(500, '服务器内部错误'));
   }
 });
@@ -395,7 +454,7 @@ router.post('/:id/comments', auth, async (req, res) => {
       return res.status(403).json(fail(403, '您已被禁言，无法发布内容'));
     }
 
-    const { content, parent_id } = req.body || {};
+    const { content, parent_id, is_anonymous } = req.body || {};
     if (!content || !String(content).trim()) {
       return res.status(400).json(fail(400, '评论内容不能为空'));
     }
@@ -420,9 +479,14 @@ router.post('/:id/comments', auth, async (req, res) => {
       }
     }
 
+    const anonymous =
+      is_anonymous === true || is_anonymous === 1 || is_anonymous === '1' || is_anonymous === 'true'
+        ? 1
+        : 0;
+
     const result = await run(
-      'INSERT INTO comments (post_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)',
-      [postId, req.user.user_id, String(content).trim(), parentId]
+      'INSERT INTO comments (post_id, user_id, content, parent_id, is_anonymous) VALUES (?, ?, ?, ?, ?)',
+      [postId, req.user.user_id, String(content).trim(), parentId, anonymous]
     );
 
     return res.status(201).json(ok({ comment_id: result.lastID }));
@@ -443,7 +507,7 @@ router.get('/:id/comments', async (req, res) => {
     const rows = await all(
       `SELECT
          c.id, c.post_id, c.user_id, c.content, c.parent_id, c.created_at,
-         c.likes_count,
+         c.likes_count, c.is_anonymous,
          u.nickname
        FROM comments c
        LEFT JOIN users u ON u.id = c.user_id
@@ -452,17 +516,24 @@ router.get('/:id/comments', async (req, res) => {
       [postId]
     );
 
-    const items = rows.map((row) => ({
-      id: row.id,
-      post_id: row.post_id,
-      user_id: row.user_id,
-      content: row.content,
-      parent_id: row.parent_id,
-      nickname: row.nickname,
-      likes_count: row.likes_count,
-      created_at: row.created_at,
-      replies: [],
-    }));
+    const currentUserId = getCurrentUserId(req);
+    const items = rows.map((row) => {
+      const anonymous = row.is_anonymous === 1;
+      const isOwner = currentUserId != null && row.user_id === currentUserId;
+      return {
+        id: row.id,
+        post_id: row.post_id,
+        user_id: (anonymous && !isOwner) ? null : row.user_id,
+        is_owner: isOwner,
+        content: row.content,
+        parent_id: row.parent_id,
+        is_anonymous: row.is_anonymous,
+        nickname: anonymous ? (isOwner ? '我 (匿名)' : '匿名用户') : row.nickname,
+        likes_count: row.likes_count,
+        created_at: row.created_at,
+        replies: [],
+      };
+    });
 
     const byId = new Map(items.map((item) => [item.id, item]));
     const topLevel = [];

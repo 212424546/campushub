@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import dayjs from 'dayjs'
-import { isSocialType } from '../constants.js'
+import { isSocialType, getImageUrl } from '../constants.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CommentItem from '../components/CommentItem.vue'
 
@@ -25,6 +25,7 @@ const commentText = ref('')
 const commentSending = ref(false)
 const replyTo = ref(null)
 const commentInput = ref(null)
+const isAnonymousComment = ref(false)
 
 function getCurrentUserId() {
   const token = localStorage.getItem('token')
@@ -80,8 +81,51 @@ const buttonText = computed(() => {
 
 const buttonDisabled = computed(() => orderLoading.value || orderDone.value || (post.value && post.value.status !== 0))
 
+const isOwnPost = computed(() => !!post.value?.is_owner)
+
 function goUser(userId) {
   if (userId != null) router.push('/user/' + userId)
+}
+
+function goPostAuthor() {
+  if (isAnonymous.value && !post.value?.is_owner) {
+    ElMessage.info('该用户已匿名')
+    return
+  }
+  goUser(post.value?.user_id)
+}
+
+function goCommentUser(comment) {
+  if (comment.is_anonymous === 1 && !comment.is_owner) {
+    ElMessage.info('该用户已匿名')
+    return
+  }
+  goUser(comment.user_id)
+}
+
+async function takeDownPost() {
+  const token = localStorage.getItem('token')
+  if (!token) { ElMessage.warning('请先登录'); router.push('/login'); return }
+  const isDelete = isSocial.value
+  const actionText = isDelete ? '删除' : '下架'
+  try {
+    await ElMessageBox.confirm(`确定${actionText}该帖子吗？`, '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    const res = await axios.delete('http://localhost:3000/api/posts/' + post.value.id, {
+      headers: { Authorization: 'Bearer ' + token },
+    })
+    if (res.data.code === 0) {
+      ElMessage.success(isDelete ? '帖子已删除' : '帖子已下架')
+      router.push('/')
+    } else {
+      ElMessage.error(res.data.msg || `${actionText}失败`)
+    }
+  } catch (err) {
+    ElMessage.error(err.response?.data?.msg || `${actionText}失败`)
+  }
 }
 
 async function takeOrder() {
@@ -246,7 +290,11 @@ async function sendComment() {
   try {
     const res = await axios.post(
       'http://localhost:3000/api/posts/' + route.params.id + '/comments',
-      { content, parent_id: replyTo.value ? replyTo.value.id : null },
+      {
+        content,
+        parent_id: replyTo.value ? replyTo.value.id : null,
+        is_anonymous: isAnonymousComment.value ? 1 : 0,
+      },
       { headers: { Authorization: 'Bearer ' + token } }
     )
     if (res.data.code === 0) {
@@ -321,10 +369,13 @@ async function blockUser() {
       <h1 class="text-2xl font-bold text-gray-800 mb-4">{{ post.title }}</h1>
 
       <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-3">
-          <el-avatar :size="44" :src="post.avatar_url || undefined">{{ (post.nickname || '匿')[0] }}</el-avatar>
+        <div class="flex items-center gap-3 cursor-pointer" @click="goPostAuthor">
+          <el-avatar :size="44" :src="getImageUrl(post.avatar_url) || undefined">{{ (post.nickname || '匿')[0] }}</el-avatar>
           <div>
-            <div class="font-semibold text-gray-800">{{ isAnonymous ? '匿名用户' : (post.nickname || '未设置昵称') }}</div>
+            <div class="flex items-center gap-1">
+              <span class="font-semibold text-gray-800">{{ isAnonymous ? (post.nickname || '匿名用户') : (post.nickname || '未设置昵称') }}</span>
+              <el-tag v-if="post.is_owner" size="small" type="primary">我</el-tag>
+            </div>
             <div v-if="!isAnonymous" class="text-xs text-gray-400">信用分 {{ post.credit_score ?? '-' }} · {{ formatRating(post.avg_rating) }}</div>
           </div>
         </div>
@@ -345,6 +396,18 @@ async function blockUser() {
 
       <el-divider content-position="left">描述</el-divider>
       <p class="text-gray-600 leading-7 whitespace-pre-wrap mb-4">{{ post.description || '暂无描述' }}</p>
+      <div v-if="post.images && post.images.length" class="flex flex-wrap gap-3 mb-4">
+        <el-image
+          v-for="(img, idx) in post.images"
+          :key="idx"
+          :src="getImageUrl(img)"
+          :preview-src-list="post.images.map(getImageUrl)"
+          :initial-index="idx"
+          fit="cover"
+          class="w-48 h-36 max-w-md rounded-lg shadow-sm cursor-pointer"
+        />
+      </div>
+
       <div class="flex justify-end mb-4">
         <el-button text type="danger" size="small" @click="reportTarget('post', post.id)">举报</el-button>
       </div>
@@ -354,7 +417,13 @@ async function blockUser() {
         <el-button :type="post.is_favorited ? 'warning' : 'default'" :disabled="favLoading" @click="toggleFavorite">⭐ {{ post.favorites_count || 0 }}</el-button>
       </div>
 
-      <el-button v-if="!isSocial" type="primary" size="large" class="w-full" :disabled="buttonDisabled" @click="takeOrder">
+      <el-button v-if="isOwnPost && isSocial" type="danger" size="large" class="w-full" @click="takeDownPost">
+        删除帖子
+      </el-button>
+      <el-button v-else-if="isOwnPost && post.status === 0" type="danger" size="large" class="w-full" @click="takeDownPost">
+        下架帖子
+      </el-button>
+      <el-button v-else-if="!isSocial" type="primary" size="large" class="w-full" :disabled="buttonDisabled" @click="takeOrder">
         {{ orderLoading ? '接单中…' : buttonText }}
       </el-button>
 
@@ -363,9 +432,9 @@ async function blockUser() {
       <p v-else-if="comments.length === 0" class="text-center text-gray-500 py-4">暂无评论</p>
       <div v-else>
         <div v-for="c in comments" :key="c.id">
-          <CommentItem :comment="c" @reply="startReply" @like="toggleCommentLike" @report="(item) => reportTarget('comment', item.id)" />
+          <CommentItem :comment="c" @reply="startReply" @like="toggleCommentLike" @report="(item) => reportTarget('comment', item.id)" @goUser="goCommentUser" />
           <div v-if="c.replies && c.replies.length" class="ml-7">
-            <CommentItem v-for="r in (c.isExpanded ? c.replies : c.replies.slice(0, 3))" :key="r.id" :comment="r" @reply="startReply" @like="toggleCommentLike" @report="(item) => reportTarget('comment', item.id)" />
+            <CommentItem v-for="r in (c.isExpanded ? c.replies : c.replies.slice(0, 3))" :key="r.id" :comment="r" @reply="startReply" @like="toggleCommentLike" @report="(item) => reportTarget('comment', item.id)" @goUser="goCommentUser" />
             <el-button v-if="c.replies.length > 3" text type="primary" size="small" @click="c.isExpanded = !c.isExpanded">
               {{ c.isExpanded ? '收起' : ('展开剩余 ' + (c.replies.length - 3) + ' 条回复') }}
             </el-button>
@@ -385,7 +454,10 @@ async function blockUser() {
           :rows="2"
           :placeholder="replyTo ? '回复 @' + (replyTo.nickname || '匿名用户') + '…' : '写下你的评论…'"
         />
-        <el-button type="primary" class="mt-2" :disabled="commentSending" @click="sendComment">发送</el-button>
+        <div class="flex items-center justify-between mt-2">
+          <el-checkbox v-model="isAnonymousComment">匿名评论</el-checkbox>
+          <el-button type="primary" :disabled="commentSending" @click="sendComment">发送</el-button>
+        </div>
       </div>
     </div>
   </div>
