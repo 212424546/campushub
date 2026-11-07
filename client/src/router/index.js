@@ -5,6 +5,7 @@ import CreatePost from '../views/CreatePost.vue'
 import PostDetail from '../views/PostDetail.vue'
 import UserCenter from '../views/UserCenter.vue'
 import PublicProfile from '../views/PublicProfile.vue'
+import Admin from '../views/Admin.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -13,6 +14,7 @@ const routes = [
   { path: '/post/:id', name: 'post-detail', component: PostDetail },
   { path: '/user-center', name: 'user-center', component: UserCenter },
   { path: '/user/:id', name: 'public-profile', component: PublicProfile },
+  { path: '/admin', name: 'admin', component: Admin },
 ]
 
 const router = createRouter({

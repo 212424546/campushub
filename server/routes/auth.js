@@ -56,6 +56,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json(fail(401, '学号或密码错误'));
     }
 
+    // 封禁拦截：账号被封禁时拒绝签发 token
+    if (user.is_banned === 1) {
+      return res.status(403).json(fail(403, '该账号已被封禁'));
+    }
+
     const token = jwt.sign(
       { user_id: user.id, role: user.role },
       process.env.JWT_SECRET,

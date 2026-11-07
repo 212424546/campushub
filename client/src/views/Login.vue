@@ -46,100 +46,30 @@ async function submit() {
 </script>
 
 <template>
-  <div class="page">
-    <div class="card">
-      <h1>{{ isRegister ? '注册' : '登录' }}</h1>
+  <div class="w-full max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-lg">
+    <h1 class="text-xl font-bold text-center text-gray-800 mb-6">{{ isRegister ? '注册' : '登录' }}</h1>
 
-      <label class="field">
-        <span>学号</span>
-        <input v-model="studentId" type="text" placeholder="请输入学号" />
-      </label>
+    <el-form label-position="top" @submit.prevent>
+      <el-form-item label="学号">
+        <el-input v-model="studentId" placeholder="请输入学号" />
+      </el-form-item>
+      <el-form-item label="密码">
+        <el-input v-model="password" type="password" placeholder="请输入密码" show-password @keyup.enter="submit" />
+      </el-form-item>
+    </el-form>
 
-      <label class="field">
-        <span>密码</span>
-        <input v-model="password" type="password" placeholder="请输入密码" />
-      </label>
+    <p v-if="message" class="text-red-500 text-sm mb-4">{{ message }}</p>
 
-      <p v-if="message" class="message">{{ message }}</p>
+    <el-button type="primary" class="w-full" :loading="loading" @click="submit">
+      {{ isRegister ? '注册' : '登录' }}
+    </el-button>
 
-      <button class="submit" :disabled="loading" @click="submit">
-        {{ loading ? '提交中…' : isRegister ? '注册' : '登录' }}
-      </button>
-
-      <p class="switch">
-        {{ isRegister ? '已有账号？' : '还没有账号？' }}
-        <a href="javascript:;" @click="isRegister = !isRegister; message = ''">
-          {{ isRegister ? '去登录' : '去注册' }}
-        </a>
-      </p>
-    </div>
+    <p class="mt-4 text-center text-sm text-gray-500">
+      {{ isRegister ? '已有账号？' : '还没有账号？' }}
+      <a href="javascript:;" class="text-indigo-600" @click="isRegister = !isRegister; message = ''">
+        {{ isRegister ? '去登录' : '去注册' }}
+      </a>
+    </p>
   </div>
 </template>
 
-<style scoped>
-.page {
-  max-width: 420px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
-}
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-h1 {
-  font-size: 20px;
-  margin: 0 0 20px;
-  text-align: center;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
-  font-size: 14px;
-  color: #374151;
-}
-.field input {
-  padding: 9px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-}
-.field input:focus {
-  border-color: #4f46e5;
-}
-.message {
-  color: #dc2626;
-  font-size: 13px;
-  margin: 0 0 12px;
-}
-.submit {
-  width: 100%;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  background: #4f46e5;
-  color: #fff;
-  font-size: 15px;
-  cursor: pointer;
-}
-.submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.switch {
-  margin: 14px 0 0;
-  text-align: center;
-  font-size: 13px;
-  color: #6b7280;
-}
-.switch a {
-  color: #4f46e5;
-  text-decoration: none;
-  cursor: pointer;
-}
-</style>

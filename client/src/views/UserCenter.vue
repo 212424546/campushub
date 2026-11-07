@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import dayjs from 'dayjs'
 import { truncateText } from '../constants.js'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import PostCard from '../components/PostCard.vue'
 
 const router = useRouter()
@@ -101,38 +102,48 @@ async function load() {
 async function editProfile() {
   const token = getToken()
   if (!token) { router.push('/login'); return }
-  const nickname = prompt('请输入昵称', profile.value?.nickname || '')
-  if (nickname === null) return
-  const bio = prompt('请输入个性签名', profile.value?.bio || '')
-  if (bio === null) return
+  let nickname, bio
+  try {
+    const r1 = await ElMessageBox.prompt('请输入昵称', '修改昵称', { inputValue: profile.value?.nickname || '' })
+    nickname = r1.value
+    const r2 = await ElMessageBox.prompt('请输入个性签名', '修改签名', { inputValue: profile.value?.bio || '' })
+    bio = r2.value
+  } catch {
+    return
+  }
   try {
     const res = await axios.put('http://localhost:3000/api/users/profile', { nickname, bio }, { headers: { Authorization: 'Bearer ' + token } })
     if (res.data.code === 0) {
       profile.value = res.data.data
-      alert('修改成功')
+      ElMessage.success('修改成功')
     } else {
-      alert(res.data.msg || '修改失败')
+      ElMessage.error(res.data.msg || '修改失败')
     }
   } catch (err) {
-    alert(err.response?.data?.msg || '修改失败')
+    ElMessage.error(err.response?.data?.msg || '修改失败')
   }
 }
 
 async function editAvatar() {
   const token = getToken()
   if (!token) { router.push('/login'); return }
-  const avatar = prompt('请输入头像图片 URL', profile.value?.avatar_url || '')
-  if (avatar === null) return
+  let avatar
+  try {
+    const r = await ElMessageBox.prompt('请输入头像图片 URL', '修改头像', { inputValue: profile.value?.avatar_url || '' })
+    avatar = r.value
+  } catch {
+    return
+  }
   try {
     const res = await axios.put('http://localhost:3000/api/users/profile', { avatar_url: avatar }, { headers: { Authorization: 'Bearer ' + token } })
     if (res.data.code === 0) {
       profile.value = res.data.data
-      alert('头像已更新')
+      ElMessage.success('头像已更新')
     } else {
-      alert(res.data.msg || '修改失败')
+      ElMessage.error(res.data.msg || '修改失败')
     }
   } catch (err) {
-    alert(err.response?.data?.msg || '修改失败')
+    ElMessage.error(err.response?.data?.msg || '修改失败')
   }
 }
 
@@ -145,15 +156,15 @@ async function uploadProof(order) {
   const token = getToken()
   if (!token) { router.push('/login'); return }
   const raw = (proofInputs.value[order.id] || '').trim()
-  if (!raw) { alert('请先填写凭证图片 URL（多个用逗号分隔）'); return }
+  if (!raw) { ElMessage.warning('请先填写凭证图片 URL（多个用逗号分隔）'); return }
   const images = raw.split(',').map((s) => s.trim()).filter(Boolean)
-  if (images.length === 0) { alert('请填写有效的图片 URL'); return }
+  if (images.length === 0) { ElMessage.warning('请填写有效的图片 URL'); return }
   actionLoading.value[order.id] = true
   try {
     const res = await axios.post('http://localhost:3000/api/orders/' + order.id + '/proof', { proof_images: images }, { headers: { Authorization: 'Bearer ' + token } })
-    if (res.data.code === 0) { alert('凭证上传成功'); await load() } else { alert(res.data.msg || '上传失败') }
+    if (res.data.code === 0) { ElMessage.success('凭证上传成功'); await load() } else { ElMessage.error(res.data.msg || '上传失败') }
   } catch (err) {
-    alert(err.response?.data?.msg || '上传失败')
+    ElMessage.error(err.response?.data?.msg || '上传失败')
   } finally {
     actionLoading.value[order.id] = false
   }
@@ -162,18 +173,27 @@ async function uploadProof(order) {
 async function submitReview(order) {
   const token = getToken()
   if (!token) { router.push('/login'); return }
-  const ratingStr = prompt('请输入评分（1-5）', '5')
-  if (ratingStr === null) return
+  let ratingStr, content
+  try {
+    const r1 = await ElMessageBox.prompt('请输入评分（1-5）', '评价', { inputValue: '5' })
+    ratingStr = r1.value
+  } catch {
+    return
+  }
   const rating = Number(ratingStr)
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) { alert('评分必须是 1-5 的整数'); return }
-  const content = prompt('请输入评价内容（可选）', '')
-  if (content === null) return
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) { ElMessage.warning('评分必须是 1-5 的整数'); return }
+  try {
+    const r2 = await ElMessageBox.prompt('请输入评价内容（可选）', '评价', { inputValue: '' })
+    content = r2.value
+  } catch {
+    return
+  }
   actionLoading.value[order.id] = true
   try {
     const res = await axios.post('http://localhost:3000/api/reviews', { order_id: order.id, rating, content }, { headers: { Authorization: 'Bearer ' + token } })
-    if (res.data.code === 0) { alert('评价成功'); reviewedIds.value[order.id] = true } else { alert(res.data.msg || '评价失败') }
+    if (res.data.code === 0) { ElMessage.success('评价成功'); reviewedIds.value[order.id] = true } else { ElMessage.error(res.data.msg || '评价失败') }
   } catch (err) {
-    alert(err.response?.data?.msg || '评价失败')
+    ElMessage.error(err.response?.data?.msg || '评价失败')
   } finally {
     actionLoading.value[order.id] = false
   }
@@ -190,17 +210,21 @@ function goPostId(id) {
 async function unblock(user) {
   const token = getToken()
   if (!token) { router.push('/login'); return }
-  if (!confirm('确定解除拉黑该用户吗？')) return
+  try {
+    await ElMessageBox.confirm('确定解除拉黑该用户吗？', '提示', { type: 'warning' })
+  } catch {
+    return
+  }
   try {
     const res = await axios.delete('http://localhost:3000/api/users/block/' + user.id, { headers: { Authorization: 'Bearer ' + token } })
     if (res.data.code === 0) {
       const r = await axios.get('http://localhost:3000/api/users/me/blacklist', { headers: { Authorization: 'Bearer ' + token } })
       blacklist.value = r.data.data || []
     } else {
-      alert(res.data.msg || '操作失败')
+      ElMessage.error(res.data.msg || '操作失败')
     }
   } catch (err) {
-    alert(err.response?.data?.msg || '操作失败')
+    ElMessage.error(err.response?.data?.msg || '操作失败')
   }
 }
 

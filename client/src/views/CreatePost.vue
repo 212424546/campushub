@@ -63,120 +63,42 @@ async function submit() {
 </script>
 
 <template>
-  <div class="page">
-    <div class="card">
-      <h1>发布帖子</h1>
+  <div class="w-full max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-lg">
+    <h1 class="text-xl font-bold text-center text-gray-800 mb-6">发布帖子</h1>
 
-      <label class="field">
-        <span>标题</span>
-        <input v-model="title" type="text" placeholder="请输入标题" />
-      </label>
+    <el-form label-position="top" @submit.prevent>
+      <el-form-item label="标题">
+        <el-input v-model="title" placeholder="请输入标题" />
+      </el-form-item>
 
-      <label class="field">
-        <span>描述</span>
-        <textarea v-model="description" rows="4" placeholder="请描述需求详情"></textarea>
-      </label>
+      <el-form-item label="描述">
+        <el-input v-model="description" type="textarea" :rows="4" placeholder="请描述需求详情" />
+      </el-form-item>
 
-      <label class="field">
-        <span>分类</span>
-        <select v-model="type">
-          <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
-        </select>
-      </label>
+      <el-form-item label="分类">
+        <el-select v-model="type" class="w-full" placeholder="请选择分类">
+          <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
+        </el-select>
+      </el-form-item>
 
-      <label v-if="!isSocial" class="field">
-        <span>报酬（元）</span>
-        <input v-model="reward" type="number" min="0" placeholder="0" />
-      </label>
+      <el-form-item v-if="!isSocial" label="报酬（元）">
+        <el-input v-model="reward" type="number" min="0" placeholder="0" />
+      </el-form-item>
 
-      <label class="field">
-        <span>校区</span>
-        <input v-model="campus" type="text" placeholder="如：东校区 / 西校区" />
-      </label>
+      <el-form-item label="校区">
+        <el-input v-model="campus" placeholder="如：东校区 / 西校区" />
+      </el-form-item>
 
-      <label class="checkbox">
-        <input v-model="isAnonymous" type="checkbox" />
-        <span>匿名发布</span>
-      </label>
+      <el-form-item>
+        <el-checkbox v-model="isAnonymous">匿名发布</el-checkbox>
+      </el-form-item>
+    </el-form>
 
-      <p v-if="message" class="message">{{ message }}</p>
+    <p v-if="message" class="text-red-500 text-sm mb-4">{{ message }}</p>
 
-      <button class="submit" :disabled="loading" @click="submit">
-        {{ loading ? '发布中…' : '发布' }}
-      </button>
-    </div>
+    <el-button type="primary" class="w-full" :loading="loading" @click="submit">
+      {{ loading ? '发布中…' : '发布' }}
+    </el-button>
   </div>
 </template>
 
-<style scoped>
-.page {
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
-}
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-h1 {
-  font-size: 20px;
-  margin: 0 0 20px;
-  text-align: center;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
-  font-size: 14px;
-  color: #374151;
-}
-.field input,
-.field textarea,
-.field select {
-  padding: 9px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-  font-family: inherit;
-}
-.field textarea {
-  resize: vertical;
-}
-.field input:focus,
-.field textarea:focus,
-.field select:focus {
-  border-color: #4f46e5;
-}
-.checkbox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #374151;
-  margin-bottom: 14px;
-}
-.message {
-  color: #dc2626;
-  font-size: 13px;
-  margin: 0 0 12px;
-}
-.submit {
-  width: 100%;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  background: #4f46e5;
-  color: #fff;
-  font-size: 15px;
-  cursor: pointer;
-}
-.submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-</style>

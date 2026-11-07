@@ -134,313 +134,78 @@ onMounted(fetchPosts)
 </script>
 
 <template>
-  <div class="page">
-    <h1>校园互助 · 帖子列表</h1>
+  <div class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-800 text-center mb-6">校园互助 · 帖子列表</h1>
 
-    <div class="filter-nav">
-      <div class="filter-row category-row">
-        <template v-for="tab in categoryTabs" :key="'cat-' + tab.value">
-          <span v-if="tab.divider" class="tab-divider"></span>
-          <button
-            class="cat-tab"
-            :class="{ active: filterType === tab.value }"
-            @click="selectType(tab.value)"
-          >{{ tab.label }}</button>
-        </template>
-      </div>
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <el-select v-model="filterType" @change="selectType" placeholder="全部分类" class="w-32">
+          <el-option v-for="tab in categoryTabs" :key="tab.value" :label="tab.label" :value="tab.value" />
+        </el-select>
 
-      <div class="filter-row sort-row">
-        <div class="sort-group">
-          <template v-for="s in sortOptions" :key="'sort-' + s.value">
-            <button
+        <el-select v-model="filterSort" @change="selectSort" placeholder="排序" class="w-32">
+          <template v-for="s in sortOptions" :key="s.value">
+            <el-option
               v-if="!(filterType === 'social' && (s.value === 'reward_desc' || s.value === 'reward_asc'))"
-              class="sort-btn"
-              :class="{ active: filterSort === s.value }"
-              @click="selectSort(s.value)"
-            >{{ s.label }}</button>
+              :label="s.label"
+              :value="s.value"
+            />
           </template>
-        </div>
-        <button class="adv-toggle" :class="{ active: showAdvanced }" @click="toggleAdvanced">高级筛选 ▾</button>
+        </el-select>
+
+        <el-button :type="showAdvanced ? 'primary' : 'default'" @click="toggleAdvanced">
+          {{ showAdvanced ? '收起筛选' : '高级筛选' }}
+        </el-button>
+      </div>
+
+      <div v-if="showAdvanced" class="flex flex-wrap items-center gap-2 mt-3">
+        <el-input v-model="filterCampus" placeholder="校区" class="w-32" />
+        <el-input v-model="filterMinReward" type="number" min="0" placeholder="最低报酬" class="w-32" />
+        <el-input v-model="filterMaxReward" type="number" min="0" placeholder="最高报酬" class="w-32" />
+        <el-button type="primary" @click="applyAdvanced">确定</el-button>
       </div>
     </div>
 
-    <div v-if="showAdvanced" class="adv-panel">
-      <input v-model="filterCampus" type="text" placeholder="校区" />
-      <input v-model="filterMinReward" type="number" min="0" placeholder="最低报酬" />
-      <input v-model="filterMaxReward" type="number" min="0" placeholder="最高报酬" />
-      <button class="adv-apply" @click="applyAdvanced">确定</button>
+    <p v-if="loading" class="text-center text-gray-500 py-10">加载中…</p>
+    <p v-else-if="error" class="text-center text-red-500 py-10">{{ error }}</p>
+    <p v-else-if="posts.length === 0" class="text-center text-gray-500 py-10">暂无帖子，快去发第一个吧～</p>
+
+    <div v-else>
+      <div
+        v-for="post in posts"
+        :key="post.id"
+        class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 mb-4 cursor-pointer"
+        @click="goDetail(post)"
+      >
+        <div class="flex items-start justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <el-avatar :size="40">{{ (post.nickname || '匿')[0] }}</el-avatar>
+            <div>
+              <div v-if="post.is_anonymous === 1 || post.is_anonymous === true" class="text-sm font-semibold text-gray-800">匿名用户</div>
+              <div v-else class="text-sm font-semibold text-indigo-600 cursor-pointer hover:underline" @click.stop="goUser(post)">{{ post.nickname || '未设置' }}</div>
+              <div class="text-xs text-gray-400">🏫 {{ post.campus || '未填写校区' }}</div>
+            </div>
+          </div>
+          <span class="text-xs text-indigo-500 bg-indigo-50 px-2 py-1 rounded-full whitespace-nowrap">{{ post.type }}</span>
+        </div>
+
+        <h2 class="text-lg font-bold text-gray-800 mb-2">{{ post.title }}</h2>
+        <p class="text-gray-500 text-sm line-clamp-2 mb-3">{{ truncateText(post.description) || '暂无描述' }}</p>
+
+        <div v-if="!isSocialType(post.type)" class="text-orange-600 font-semibold">
+          {{ post.type === '二手' ? '价格' : '报酬' }} ¥{{ post.reward }}
+        </div>
+      </div>
     </div>
 
-    <p v-if="loading" class="tip">加载中…</p>
-    <p v-else-if="error" class="tip error">{{ error }}</p>
-    <p v-else-if="posts.length === 0" class="tip">暂无帖子，快去发第一个吧～</p>
-
-    <ul v-else class="post-list">
-      <li v-for="post in posts" :key="post.id" class="post-card" @click="goDetail(post)">
-        <div class="post-head">
-          <h2 class="post-title">{{ post.title }}</h2>
-          <span v-if="!isSocialType(post.type)" class="post-reward">{{ post.type === '二手' ? '价格' : '报酬' }} ¥{{ post.reward }}</span>
-        </div>
-        <p class="post-desc">{{ truncateText(post.description) || '暂无描述' }}</p>
-        <div class="post-meta">
-          <span class="tag">{{ post.type }}</span>
-          <span class="campus">🏫 {{ post.campus || '未填写校区' }}</span>
-          <span v-if="post.is_anonymous === 1 || post.is_anonymous === true" class="nickname">👤 匿名用户</span>
-          <span v-else class="nickname nickname-link" @click.stop="goUser(post)">👤 {{ post.nickname || '未设置' }}</span>
-        </div>
-      </li>
-    </ul>
-
-    <div v-if="!loading && !error && posts.length" class="pagination">
-      <button class="page-btn" :disabled="page <= 1" @click="prevPage">上一页</button>
-      <span class="page-info">{{ page }} / {{ totalPages }}</span>
-      <button class="page-btn" :disabled="page >= totalPages" @click="nextPage">下一页</button>
-      <div class="page-jump">
-        <input v-model="jumpPage" type="number" min="1" placeholder="页码" @keyup.enter="jumpToPage" />
-        <button class="page-btn" @click="jumpToPage">跳转</button>
+    <div v-if="!loading && !error && posts.length" class="flex items-center justify-center flex-wrap gap-3 mt-6">
+      <el-button :disabled="page <= 1" @click="prevPage">上一页</el-button>
+      <span class="text-sm text-gray-600">{{ page }} / {{ totalPages }}</span>
+      <el-button :disabled="page >= totalPages" @click="nextPage">下一页</el-button>
+      <div class="flex items-center gap-2">
+        <el-input v-model="jumpPage" type="number" min="1" placeholder="页码" class="w-24" @keyup.enter="jumpToPage" />
+        <el-button @click="jumpToPage">跳转</el-button>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.page {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
-  font-family: system-ui, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-  color: #1f2937;
-}
-h1 {
-  font-size: 24px;
-  margin: 0 0 20px;
-  text-align: center;
-}
-.filter-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.filter-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.category-row {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 2px;
-}
-.tab-divider {
-  flex-shrink: 0;
-  width: 1px;
-  height: 18px;
-  background: #d1d5db;
-}
-.sort-row {
-  justify-content: space-between;
-}
-.sort-group {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.cat-tab {
-  border: none;
-  background: transparent;
-  color: #4b5563;
-  padding: 8px 16px;
-  font-size: 16px;
-  cursor: pointer;
-  border-radius: 999px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background 0.2s, color 0.2s;
-}
-.cat-tab:hover {
-  color: #2563eb;
-}
-.cat-tab.active {
-  background: #2563eb;
-  color: #fff;
-  font-weight: 600;
-}
-.sort-btn {
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #6b7280;
-  padding: 5px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: 999px;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-.sort-btn.active {
-  background: #eef2ff;
-  border-color: #93c5fd;
-  color: #2563eb;
-  font-weight: 600;
-}
-.adv-toggle {
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #374151;
-  padding: 5px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: 999px;
-}
-.adv-toggle.active {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
-}
-.adv-panel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 16px;
-}
-.adv-panel input {
-  flex: 1 1 140px;
-  padding: 8px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 13px;
-  outline: none;
-  color: #374151;
-}
-.adv-panel input:focus {
-  border-color: #2563eb;
-}
-.adv-apply {
-  flex-shrink: 0;
-  border: none;
-  background: #2563eb;
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.tip {
-  text-align: center;
-  color: #6b7280;
-}
-.tip.error {
-  color: #dc2626;
-}
-.post-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.post-card {
-  cursor: pointer;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px 18px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-.post-card:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-.post-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-.post-title {
-  font-size: 18px;
-  margin: 0;
-  color: #111827;
-}
-.post-reward {
-  color: #ea580c;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.post-desc {
-  margin: 10px 0 12px;
-  color: #4b5563;
-  line-height: 1.6;
-}
-.post-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  font-size: 13px;
-  color: #6b7280;
-}
-.tag {
-  background: #eef2ff;
-  color: #4f46e5;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-.nickname-link {
-  cursor: pointer;
-  color: #2563eb;
-}
-.nickname-link:hover {
-  text-decoration: underline;
-}
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
-}
-.page-btn {
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #374151;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-.page-btn:disabled {
-  background: #f3f4f6;
-  color: #cbd5e1;
-  cursor: not-allowed;
-}
-.page-info {
-  font-size: 14px;
-  color: #374151;
-}
-.page-jump {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.page-jump input {
-  width: 64px;
-  padding: 6px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-  text-align: center;
-}
-.page-jump input:focus {
-  border-color: #2563eb;
-}
-</style>

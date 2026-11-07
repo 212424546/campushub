@@ -24,6 +24,12 @@ router.post('/', auth, async (req, res) => {
   try {
     const { type, title, description, reward, campus, is_anonymous } = req.body || {};
 
+    // 禁言拦截：被禁言用户禁止发帖
+    const currentUser = await get('SELECT is_muted FROM users WHERE id = ?', [req.user.user_id]);
+    if (currentUser?.is_muted === 1) {
+      return res.status(403).json(fail(403, '您已被禁言，无法发布内容'));
+    }
+
     if (!type || !title) {
       return res.status(400).json(fail(400, 'type 和 title 不能为空'));
     }
@@ -381,6 +387,12 @@ router.post('/:id/comments', auth, async (req, res) => {
     const postId = Number(req.params.id);
     if (!Number.isInteger(postId) || postId <= 0) {
       return res.status(400).json(fail(400, '无效的帖子 ID'));
+    }
+
+    // 禁言拦截：被禁言用户禁止发评论
+    const currentUser = await get('SELECT is_muted FROM users WHERE id = ?', [req.user.user_id]);
+    if (currentUser?.is_muted === 1) {
+      return res.status(403).json(fail(403, '您已被禁言，无法发布内容'));
     }
 
     const { content, parent_id } = req.body || {};

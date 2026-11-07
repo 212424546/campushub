@@ -17,6 +17,8 @@ const TABLES = [
     avatar_url VARCHAR(255),
     bio TEXT,
     role INTEGER NOT NULL DEFAULT 0,
+    is_muted INTEGER NOT NULL DEFAULT 0,
+    is_banned INTEGER NOT NULL DEFAULT 0,
     credit_score INTEGER NOT NULL DEFAULT 100,
     avg_rating NUMERIC NOT NULL DEFAULT 0,
     is_anonymous_default INTEGER NOT NULL DEFAULT 0,
@@ -204,6 +206,8 @@ async function migrate() {
   console.log('补充旧表缺失字段...');
   await ensureColumn('comments', 'parent_id', 'INTEGER');
   await ensureColumn('comments', 'likes_count', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn('users', 'is_muted', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn('users', 'is_banned', 'INTEGER NOT NULL DEFAULT 0');
 
   console.log('初始化违禁词...');
   let inserted = 0;

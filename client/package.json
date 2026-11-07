@@ -9,8 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "autoprefixer": "^10.6.2",
     "axios": "^1.21.0",
     "dayjs": "^1.11.23",
+    "element-plus": "^2.14.8",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^3.4.19",
     "vue": "^3.5.44",
     "vue-router": "^4.6.4"
   },
