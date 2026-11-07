@@ -1,25 +1,18 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const router = useRouter()
 
 const isLoggedIn = ref(!!localStorage.getItem('token'))
 
-// 路由变化时重新读取登录状态（登录/退出后导航栏同步更新）
+// 路由变化时重新读取登录状态
 watch(
   () => route.fullPath,
   () => {
     isLoggedIn.value = !!localStorage.getItem('token')
   }
 )
-
-function logout() {
-  localStorage.removeItem('token')
-  isLoggedIn.value = false
-  router.push('/')
-}
 </script>
 
 <template>
@@ -29,9 +22,11 @@ function logout() {
         <RouterLink to="/" class="brand">CampusHub 校园互助</RouterLink>
         <nav class="nav-links">
           <RouterLink to="/">首页</RouterLink>
-          <RouterLink to="/create">发帖</RouterLink>
-          <RouterLink v-if="!isLoggedIn" to="/login">登录</RouterLink>
-          <button v-else class="logout-btn" @click="logout">退出</button>
+          <template v-if="isLoggedIn">
+            <RouterLink to="/create">发帖</RouterLink>
+            <RouterLink to="/user-center">个人中心</RouterLink>
+          </template>
+          <RouterLink v-else to="/login">登录/注册</RouterLink>
         </nav>
       </div>
     </header>
@@ -87,18 +82,5 @@ function logout() {
 .nav-links a.router-link-exact-active {
   color: #4f46e5;
   background: #eef2ff;
-}
-.logout-btn {
-  border: none;
-  background: #f3f4f6;
-  color: #374151;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-.logout-btn:hover {
-  background: #fee2e2;
-  color: #dc2626;
 }
 </style>

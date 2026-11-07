@@ -8,6 +8,8 @@ import reviewsRoutes from './routes/reviews.js';
 import disputesRoutes from './routes/disputes.js';
 import adminRoutes from './routes/admin.js';
 import usersRoutes from './routes/users.js';
+import commentsRoutes from './routes/comments.js';
+import reportsRoutes from './routes/reports.js';
 import { ok } from './utils/response.js';
 
 dotenv.config();
@@ -30,6 +32,12 @@ app.use('/api/auth', authRoutes);
 
 // 挂载帖子路由
 app.use('/api/posts', postsRoutes);
+
+// 挂载评论互动路由
+app.use('/api/comments', commentsRoutes);
+
+// 挂载举报路由
+app.use('/api/reports', reportsRoutes);
 
 // 挂载订单路由
 app.use('/api/orders', ordersRoutes);

@@ -15,6 +15,7 @@ const TABLES = [
     password VARCHAR(255) NOT NULL,
     nickname VARCHAR(50),
     avatar_url VARCHAR(255),
+    bio TEXT,
     role INTEGER NOT NULL DEFAULT 0,
     credit_score INTEGER NOT NULL DEFAULT 100,
     avg_rating NUMERIC NOT NULL DEFAULT 0,
@@ -97,7 +98,101 @@ const TABLES = [
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+
+  // 7. comments 评论表（支持二级回复与点赞数）
+  `CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    content TEXT,
+    parent_id INTEGER,
+    likes_count INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`,
+
+  // 8. blacklists 黑名单表
+  `CREATE TABLE IF NOT EXISTS blacklists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    blocked_user_id INTEGER NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (blocked_user_id) REFERENCES users(id)
+  )`,
+
+  // 9. likes 帖子点赞表
+  `CREATE TABLE IF NOT EXISTS likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, post_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (post_id) REFERENCES posts(id)
+  )`,
+
+  // 10. favorites 帖子收藏表
+  `CREATE TABLE IF NOT EXISTS favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, post_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (post_id) REFERENCES posts(id)
+  )`,
+
+  // 11. history 浏览历史表
+  `CREATE TABLE IF NOT EXISTS history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+    viewed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, post_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (post_id) REFERENCES posts(id)
+  )`,
+
+  // 12. comment_likes 评论点赞表
+  `CREATE TABLE IF NOT EXISTS comment_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    comment_id INTEGER NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, comment_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (comment_id) REFERENCES comments(id)
+  )`,
+
+  // 13. reports 举报表
+  `CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reporter_id INTEGER NOT NULL,
+    target_type VARCHAR(10) NOT NULL,
+    target_id INTEGER NOT NULL,
+    reason TEXT,
+    status INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (reporter_id) REFERENCES users(id)
+  )`,
 ];
+
+// 为已存在的旧表补充缺失列（CREATE TABLE IF NOT EXISTS 不会修改已有表结构）
+async function ensureColumn(table, column, definition) {
+  const cols = await all(`PRAGMA table_info(${table})`);
+  if (!cols.some((c) => c.name === column)) {
+    await run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    console.log(`   ↳ 已为 ${table} 表新增列 ${column}`);
+  }
+}
 
 async function migrate() {
   console.log('开始创建数据表...');
@@ -105,6 +200,10 @@ async function migrate() {
     await run(sql);
   }
   console.log('数据表创建完成。\n');
+
+  console.log('补充旧表缺失字段...');
+  await ensureColumn('comments', 'parent_id', 'INTEGER');
+  await ensureColumn('comments', 'likes_count', 'INTEGER NOT NULL DEFAULT 0');
 
   console.log('初始化违禁词...');
   let inserted = 0;

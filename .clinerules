@@ -1,0 +1,5 @@
+# CampusHub 开发规范
+- 技术栈：Node.js + Express (ESM 写法) + SQLite。
+- 所有接口返回格式：`{ code: 0, msg: "ok", data: ... }`
+- 不要动 .env 和 .gitignore。
+- 每次只做一件事，写大段代码前先给我看结构设计。

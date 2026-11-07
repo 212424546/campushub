@@ -1,16 +1,19 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import { SOCIAL_TYPES } from '../constants.js'
 
 const router = useRouter()
 
-const categories = ['跑腿', '二手', '失物招领', '学习']
+const categories = ['跑腿', '二手', '失物招领', '学习', ...SOCIAL_TYPES]
 
 const title = ref('')
 const description = ref('')
 const type = ref('跑腿')
 const reward = ref('')
+
+const isSocial = computed(() => SOCIAL_TYPES.includes(type.value))
 const campus = ref('')
 const isAnonymous = ref(false)
 const loading = ref(false)
@@ -37,7 +40,7 @@ async function submit() {
         type: type.value,
         title: title.value,
         description: description.value,
-        reward: Number(reward.value) || 0,
+        reward: isSocial.value ? 0 : Number(reward.value) || 0,
         campus: campus.value,
         is_anonymous: isAnonymous.value ? 1 : 0,
       },
@@ -81,7 +84,7 @@ async function submit() {
         </select>
       </label>
 
-      <label class="field">
+      <label v-if="!isSocial" class="field">
         <span>报酬（元）</span>
         <input v-model="reward" type="number" min="0" placeholder="0" />
       </label>
