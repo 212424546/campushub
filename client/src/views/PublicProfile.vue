@@ -21,9 +21,9 @@ function formatTime(t) {
 async function load() {
   try {
     const id = route.params.id
-    const res = await axios.get('http://localhost:3000/api/users/' + id + '/public')
+    const res = await axios.get('/api/users/' + id + '/public')
     profile.value = res.data.data
-    const reviewsRes = await axios.get('http://localhost:3000/api/users/reviews?user_id=' + id)
+    const reviewsRes = await axios.get('/api/users/reviews?user_id=' + id)
     reviews.value = reviewsRes.data.data || []
   } catch (err) {
     error.value = err.response?.data?.msg || '加载失败'

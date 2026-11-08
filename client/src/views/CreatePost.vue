@@ -5,6 +5,7 @@ import axios from 'axios'
 import { SOCIAL_TYPES, getImageUrl } from '../constants.js'
 
 const router = useRouter()
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 const categories = ['跑腿', '二手', '失物招领', '学习', ...SOCIAL_TYPES]
 
@@ -49,7 +50,7 @@ async function submit() {
   message.value = ''
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/posts',
+      '/api/posts',
       {
         type: type.value,
         title: title.value,
@@ -111,7 +112,7 @@ async function submit() {
       <el-form-item label="图片（最多 3 张）">
         <el-upload
           name="file"
-          action="http://localhost:3000/api/upload"
+          :action="`${API_BASE_URL}/api/upload`"
           :headers="uploadHeaders"
           list-type="picture-card"
           :limit="3"

@@ -34,7 +34,7 @@ function postStatusText(p) {
 
 async function loadPosts() {
   try {
-    const res = await axios.get('http://localhost:3000/api/admin/posts', { headers: authHeaders() })
+    const res = await axios.get('/api/admin/posts', { headers: authHeaders() })
     posts.value = res.data.data || []
   } catch (err) {
     errorMsg.value = err.response?.data?.msg || '加载帖子失败'
@@ -43,7 +43,7 @@ async function loadPosts() {
 
 async function loadUsers() {
   try {
-    const res = await axios.get('http://localhost:3000/api/admin/users', { headers: authHeaders() })
+    const res = await axios.get('/api/admin/users', { headers: authHeaders() })
     users.value = res.data.data || []
   } catch (err) {
     errorMsg.value = err.response?.data?.msg || '加载用户失败'
@@ -58,7 +58,7 @@ async function takedown(post) {
   }
   try {
     const res = await axios.patch(
-      'http://localhost:3000/api/admin/posts/' + post.id + '/takedown',
+      '/api/admin/posts/' + post.id + '/takedown',
       {},
       { headers: authHeaders() }
     )
@@ -76,7 +76,7 @@ async function deletePost(post) {
     return
   }
   try {
-    const res = await axios.delete('http://localhost:3000/api/admin/posts/' + post.id, {
+    const res = await axios.delete('/api/admin/posts/' + post.id, {
       headers: authHeaders(),
     })
     if (res.data.code === 0) await loadPosts()
@@ -89,7 +89,7 @@ async function deletePost(post) {
 async function setMute(user) {
   try {
     const res = await axios.put(
-      'http://localhost:3000/api/admin/users/' + user.id + '/status',
+      '/api/admin/users/' + user.id + '/status',
       { is_muted: user.is_muted ? 0 : 1 },
       { headers: authHeaders() }
     )
@@ -110,7 +110,7 @@ async function setBan(user) {
   }
   try {
     const res = await axios.put(
-      'http://localhost:3000/api/admin/users/' + user.id + '/status',
+      '/api/admin/users/' + user.id + '/status',
       { is_banned: user.is_banned ? 0 : 1 },
       { headers: authHeaders() }
     )

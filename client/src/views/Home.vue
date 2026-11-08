@@ -61,7 +61,7 @@ async function fetchPosts() {
   error.value = ''
   try {
     const qs = buildQuery()
-    const url = 'http://localhost:3000/api/posts' + (qs ? '?' + qs : '')
+    const url = '/api/posts' + (qs ? '?' + qs : '')
     const headers = {}
     const token = localStorage.getItem('token')
     if (token) headers.Authorization = 'Bearer ' + token

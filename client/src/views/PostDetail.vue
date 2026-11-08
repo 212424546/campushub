@@ -46,7 +46,7 @@ onMounted(async () => {
   const token = localStorage.getItem('token')
   const headers = token ? { Authorization: 'Bearer ' + token } : {}
   try {
-    const res = await axios.get('http://localhost:3000/api/posts/' + route.params.id, { headers })
+    const res = await axios.get('/api/posts/' + route.params.id, { headers })
     post.value = res.data.data
   } catch (err) {
     error.value = err.response?.data?.msg || '加载帖子失败'
@@ -55,7 +55,7 @@ onMounted(async () => {
   }
   fetchComments()
   if (token) {
-    axios.post('http://localhost:3000/api/posts/' + route.params.id + '/history', {}, { headers }).catch(() => {})
+    axios.post('/api/posts/' + route.params.id + '/history', {}, { headers }).catch(() => {})
   }
 })
 
@@ -114,7 +114,7 @@ async function takeDownPost() {
     return
   }
   try {
-    const res = await axios.delete('http://localhost:3000/api/posts/' + post.value.id, {
+    const res = await axios.delete('/api/posts/' + post.value.id, {
       headers: { Authorization: 'Bearer ' + token },
     })
     if (res.data.code === 0) {
@@ -138,7 +138,7 @@ async function takeOrder() {
   orderLoading.value = true
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/orders',
+      '/api/orders',
       { post_id: Number(route.params.id) },
       { headers: { Authorization: 'Bearer ' + token } }
     )
@@ -161,7 +161,7 @@ async function toggleLike() {
   likeLoading.value = true
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/posts/' + route.params.id + '/like',
+      '/api/posts/' + route.params.id + '/like',
       {},
       { headers: { Authorization: 'Bearer ' + token } }
     )
@@ -184,7 +184,7 @@ async function toggleFavorite() {
   favLoading.value = true
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/posts/' + route.params.id + '/favorite',
+      '/api/posts/' + route.params.id + '/favorite',
       {},
       { headers: { Authorization: 'Bearer ' + token } }
     )
@@ -213,7 +213,7 @@ async function reportTarget(target_type, target_id) {
   if (!token) { ElMessage.warning('请先登录'); router.push('/login'); return }
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/reports',
+      '/api/reports',
       { target_type, target_id, reason },
       { headers: { Authorization: 'Bearer ' + token } }
     )
@@ -257,7 +257,7 @@ function flattenReplies(comments) {
 async function fetchComments() {
   commentsLoading.value = true
   try {
-    const res = await axios.get('http://localhost:3000/api/posts/' + route.params.id + '/comments')
+    const res = await axios.get('/api/posts/' + route.params.id + '/comments')
     comments.value = flattenReplies(res.data.data || [])
   } catch (err) {
     comments.value = []
@@ -289,7 +289,7 @@ async function sendComment() {
   commentSending.value = true
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/posts/' + route.params.id + '/comments',
+      '/api/posts/' + route.params.id + '/comments',
       {
         content,
         parent_id: replyTo.value ? replyTo.value.id : null,
@@ -316,7 +316,7 @@ async function toggleCommentLike(comment) {
   if (!token) { ElMessage.warning('请先登录'); router.push('/login'); return }
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/comments/' + comment.id + '/like',
+      '/api/comments/' + comment.id + '/like',
       {},
       { headers: { Authorization: 'Bearer ' + token } }
     )
@@ -342,7 +342,7 @@ async function blockUser() {
   if (!token) { ElMessage.warning('请先登录'); router.push('/login'); return }
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/users/block',
+      '/api/users/block',
       { blocked_user_id: post.value.user_id },
       { headers: { Authorization: 'Bearer ' + token } }
     )

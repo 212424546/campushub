@@ -16,6 +16,6 @@ export function getImageUrl(path) {
   if (!path) return path
   const str = String(path)
   if (/^https?:\/\//i.test(str) || str.startsWith('data:')) return str
-  if (str.startsWith('/')) return 'http://localhost:3000' + str
+  if (str.startsWith('/')) return (import.meta.env.VITE_API_BASE_URL || '') + str
   return str
 }

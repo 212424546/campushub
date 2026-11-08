@@ -21,7 +21,7 @@ async function submit() {
   message.value = ''
   try {
     const path = isRegister.value ? '/api/auth/register' : '/api/auth/login'
-    const res = await axios.post('http://localhost:3000' + path, {
+    const res = await axios.post(path, {
       student_id: studentId.value,
       password: password.value,
     })

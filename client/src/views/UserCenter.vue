@@ -70,19 +70,19 @@ async function load() {
   error.value = ''
   try {
     const headers = { Authorization: 'Bearer ' + token }
-    const meRes = await axios.get('http://localhost:3000/api/users/me', { headers })
+    const meRes = await axios.get('/api/users/me', { headers })
     profile.value = meRes.data.data
     const uid = profile.value.id
 
     const results = await Promise.allSettled([
-      axios.get('http://localhost:3000/api/posts?user_id=' + uid + '&status=all'),
-      axios.get('http://localhost:3000/api/orders/published', { headers }),
-      axios.get('http://localhost:3000/api/orders/taken', { headers }),
-      axios.get('http://localhost:3000/api/users/reviews', { headers }),
-      axios.get('http://localhost:3000/api/users/me/likes', { headers }),
-      axios.get('http://localhost:3000/api/users/me/favorites', { headers }),
-      axios.get('http://localhost:3000/api/users/me/history', { headers }),
-      axios.get('http://localhost:3000/api/users/me/blacklist', { headers }),
+      axios.get('/api/posts?user_id=' + uid + '&status=all'),
+      axios.get('/api/orders/published', { headers }),
+      axios.get('/api/orders/taken', { headers }),
+      axios.get('/api/users/reviews', { headers }),
+      axios.get('/api/users/me/likes', { headers }),
+      axios.get('/api/users/me/favorites', { headers }),
+      axios.get('/api/users/me/history', { headers }),
+      axios.get('/api/users/me/blacklist', { headers }),
     ])
     if (results[0].status === 'fulfilled') myPosts.value = results[0].value.data.data.list || []
     if (results[1].status === 'fulfilled') publishedOrders.value = results[1].value.data.data || []
@@ -112,7 +112,7 @@ async function editProfile() {
     return
   }
   try {
-    const res = await axios.put('http://localhost:3000/api/users/profile', { nickname, bio }, { headers: { Authorization: 'Bearer ' + token } })
+    const res = await axios.put('/api/users/profile', { nickname, bio }, { headers: { Authorization: 'Bearer ' + token } })
     if (res.data.code === 0) {
       profile.value = res.data.data
       ElMessage.success('修改成功')
@@ -135,7 +135,7 @@ async function editAvatar() {
     return
   }
   try {
-    const res = await axios.put('http://localhost:3000/api/users/profile', { avatar_url: avatar }, { headers: { Authorization: 'Bearer ' + token } })
+    const res = await axios.put('/api/users/profile', { avatar_url: avatar }, { headers: { Authorization: 'Bearer ' + token } })
     if (res.data.code === 0) {
       profile.value = res.data.data
       ElMessage.success('头像已更新')
@@ -161,7 +161,7 @@ async function uploadProof(order) {
   if (images.length === 0) { ElMessage.warning('请填写有效的图片 URL'); return }
   actionLoading.value[order.id] = true
   try {
-    const res = await axios.post('http://localhost:3000/api/orders/' + order.id + '/proof', { proof_images: images }, { headers: { Authorization: 'Bearer ' + token } })
+    const res = await axios.post('/api/orders/' + order.id + '/proof', { proof_images: images }, { headers: { Authorization: 'Bearer ' + token } })
     if (res.data.code === 0) { ElMessage.success('凭证上传成功'); await load() } else { ElMessage.error(res.data.msg || '上传失败') }
   } catch (err) {
     ElMessage.error(err.response?.data?.msg || '上传失败')
@@ -190,7 +190,7 @@ async function submitReview(order) {
   }
   actionLoading.value[order.id] = true
   try {
-    const res = await axios.post('http://localhost:3000/api/reviews', { order_id: order.id, rating, content }, { headers: { Authorization: 'Bearer ' + token } })
+    const res = await axios.post('/api/reviews', { order_id: order.id, rating, content }, { headers: { Authorization: 'Bearer ' + token } })
     if (res.data.code === 0) { ElMessage.success('评价成功'); reviewedIds.value[order.id] = true } else { ElMessage.error(res.data.msg || '评价失败') }
   } catch (err) {
     ElMessage.error(err.response?.data?.msg || '评价失败')
@@ -218,7 +218,7 @@ async function takeDownPost(post) {
     return
   }
   try {
-    const res = await axios.delete('http://localhost:3000/api/posts/' + post.id, {
+    const res = await axios.delete('/api/posts/' + post.id, {
       headers: { Authorization: 'Bearer ' + token },
     })
     if (res.data.code === 0) {
@@ -241,9 +241,9 @@ async function unblock(user) {
     return
   }
   try {
-    const res = await axios.delete('http://localhost:3000/api/users/block/' + user.id, { headers: { Authorization: 'Bearer ' + token } })
+    const res = await axios.delete('/api/users/block/' + user.id, { headers: { Authorization: 'Bearer ' + token } })
     if (res.data.code === 0) {
-      const r = await axios.get('http://localhost:3000/api/users/me/blacklist', { headers: { Authorization: 'Bearer ' + token } })
+      const r = await axios.get('/api/users/me/blacklist', { headers: { Authorization: 'Bearer ' + token } })
       blacklist.value = r.data.data || []
     } else {
       ElMessage.error(res.data.msg || '操作失败')
