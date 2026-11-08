@@ -61,6 +61,6 @@ app.use('/api/admin', adminRoutes);
 // 挂载用户公开信息路由
 app.use('/api/users', usersRoutes);
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running at http://localhost:${PORT}`);
 });
